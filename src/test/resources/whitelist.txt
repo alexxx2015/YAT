@@ -1,0 +1,5 @@
+contains:org.owasp
+startswith:myjzip
+startswith:jzip
+startswith:test.TestProgram10
+equals:java.lang.Strings

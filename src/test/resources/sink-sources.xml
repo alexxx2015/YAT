@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<sourcesandsinks>
+	<source class="Lmyjzip/JZipSimple" selector="source()I" params="ret"/>
+	<source class="Ljava/io/InputStream" selector="read()I" params="ret"/>
+	<source class="Ljava/io/InputStream" selector="read([B)I" params="1"/>
+	<source class="Ljava/io/InputStream" selector="read([BII)I" params="1"/>
+	<source class="Ljava/io/InputStream" selector="read([BII)I" params="1"/>
+	<source class="Ljava/io/Reader" selector="read(Ljava/nio/CharBuffer;)I" params="1"/>
+	<source class="Ljava/io/Reader" selector="read()I" params="ret"/>
+	<source class="Ljava/io/Reader" selector="read([C)I" params="1"/>
+	<source class="Ljava/io/Reader" selector="read([CII)I" params="1"/>
+	
+	<source class="Ljava/io/FileInputStream" selector="read([B)I" params="1"/>
+	<source class="Ljava/io/BufferedInputStream" selector="read([B)I" params="1"/>
+	<sink class="Ljava/util/zip/ZipOutputStream" selector="write([BII)V" params="1"/>
+	<sink class="Ljava/io/FileOutputStream" selector="write([B)V" params="1"/>
+	
+	<sink class="Lmyjzip/JZipSimple" selector="sink(I)V" params="1"/>
+	<sink class="Ljava/io/OutputStream" selector="write(I)V" params="1"/>
+	<sink class="Ljava/io/OutputStream" selector="write([B)V" params="1"/>
+	<sink class="Ljava/io/OutputStream" selector="write([BII)V" params="1"/>
+	<sink class="Ljava/io/OutputStream" selector="write([BII)V" params="1"/>
+	<sink class="Ljava/io/Writer" selector="write(I)V" params="1"/>
+	<sink class="Ljava/io/Writer" selector="write(I)V" params="1"/>
+	<sink class="Ljava/io/Writer" selector="write([C)V" params="1"/>
+	<sink class="Ljava/io/Writer" selector="write([CII)V" params="1"/>
+	<sink class="Ljava/io/Writer" selector="write(Ljava/lang/String;)V" params="1"/>
+	<sink class="Ljava/io/Writer" selector="write(Ljava/lang/String;II)V" params="1"/>
+</sourcesandsinks>
