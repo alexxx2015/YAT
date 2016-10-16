@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
+import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
@@ -38,7 +39,7 @@ public class TaintTrackerConfig {
 	public static final String TAINT_DESC = "I";
 	public static final String TAINT_WRAPPER_CLASS = TaintTrackerConfig.unescapeStr(Integer.class.getName());
 	public static final String TAINT_WRAPPER_CLASS_METHOD = "intValue";
-	public static final String TAINT_WRAPPER_CLASS_METHOD_DESC = "()I"; 
+	public static final String TAINT_WRAPPER_CLASS_METHOD_DESC = "()I";
 	public static final int TAINT_LOAD_INSTR = Opcodes.ILOAD;
 	public static final int TAINT_LOAD_ARR_INSTR = Opcodes.ALOAD;
 	public static final int TAINT_STORE_INSTR = Opcodes.ISTORE;
@@ -55,36 +56,39 @@ public class TaintTrackerConfig {
 	public static final String TAINT_STACK_ARR_TYPE = TAINT_DESC_ARR;
 
 	public static SinkSourceSpecReader reader;
-	
-	public static int[] unbox(Integer[] p){
+
+	public static int[] unbox(Integer[] p) {
 		int[] _return = new int[p.length];
 		int i = 0;
-		for(Integer value : p){
-			_return[i++]=value.intValue();
+		for (Integer value : p) {
+			_return[i++] = value.intValue();
 		}
 		return _return;
 	}
-	public static Integer[] box(int[] p){
+
+	public static Integer[] box(int[] p) {
 		Integer[] _return = new Integer[p.length];
 		int i = 0;
-		for(int u : p){
+		for (int u : p) {
 			_return[i++] = new Integer(u);
 		}
-		return _return;				
-	}
-	public static double[] unbox(Double[] p){
-		double[] _return = new double[p.length];
-		int i = 0;
-		for(Double value : p)
-			_return[i++]=value.intValue();
 		return _return;
 	}
-	public static Double[] box(double[] p){
+
+	public static double[] unbox(Double[] p) {
+		double[] _return = new double[p.length];
+		int i = 0;
+		for (Double value : p)
+			_return[i++] = value.intValue();
+		return _return;
+	}
+
+	public static Double[] box(double[] p) {
 		Double[] _return = new Double[p.length];
 		int i = 0;
-		for(double u : p)
+		for (double u : p)
 			_return[i++] = new Double(u);
-		return _return;				
+		return _return;
 	}
 
 	public static String getProperty(String property) {
@@ -137,7 +141,7 @@ public class TaintTrackerConfig {
 	}
 
 	public static String makeBCSignature(String str) {
-		if(str.length() == 1)
+		if (str.length() == 1)
 			return str;
 		else if (str.length() > 0 && str.startsWith("["))
 			return str;
@@ -235,7 +239,7 @@ public class TaintTrackerConfig {
 			}
 			break;
 		}
-		
+
 		return helperTaintWrapper;
 	}
 
@@ -250,6 +254,22 @@ public class TaintTrackerConfig {
 		if (o == Opcodes.INTEGER || o == Opcodes.FLOAT || o == Opcodes.DOUBLE || o == Opcodes.LONG || o == Opcodes.TOP)
 			_return = true;
 
+		return _return;
+	}
+
+	public static boolean isPrimitiveStackType(Type t) {
+		boolean _return = false;
+		switch (t.getSort()) {
+		case Type.BOOLEAN:
+		case Type.CHAR:
+		case Type.BYTE:
+		case Type.SHORT:
+		case Type.INT:
+		case Type.FLOAT:
+		case Type.LONG:
+		case Type.DOUBLE:
+			_return = true;
+		}
 		return _return;
 	}
 
@@ -292,42 +312,46 @@ public class TaintTrackerConfig {
 		reader = new SinkSourceSpecReader();
 		reader.readReport(filename);
 	}
-	
+
 	private static int TaintMarkCounter = 5;
-	private static Map<Object,Integer> TaintMap = new HashMap<Object,Integer>();
-	public static int getTaint(String parentClassName, String parentMethodName, String childClassName, String childMethodName){
-		String key = TaintTrackerConfig.escapeStr(parentClassName)+"."+parentMethodName+"_"+TaintTrackerConfig.escapeStr(childClassName)+"."+childMethodName;
+	private static Map<Object, Integer> TaintMap = new HashMap<Object, Integer>();
+
+	public static int getTaint(String parentClassName, String parentMethodName, String childClassName,
+			String childMethodName) {
+		String key = TaintTrackerConfig.escapeStr(parentClassName) + "." + parentMethodName + "_"
+				+ TaintTrackerConfig.escapeStr(childClassName) + "." + childMethodName;
 		int _return = 0;
-//		check if a taint label already exist
-		if(TaintMap.containsKey(key)){
+		// check if a taint label already exist
+		if (TaintMap.containsKey(key)) {
 			_return = TaintMap.get(key);
 		}
-//		generate a new taint label
-		else{
+		// generate a new taint label
+		else {
 			TaintMap.put(key, (_return = getNextTaint()));
 		}
 		return _return;
 	}
+
 	private static int getNextTaint() {
 		int _return = TaintMarkCounter;
 		TaintMarkCounter = TaintMarkCounter << 1;
 		return _return;
 	}
-	
-//	generates an array of taints
-	public static int[] getTaint(int length){
+
+	// generates an array of taints
+	public static int[] getTaint(int length) {
 		int[] _return = new int[length];
 		int taintMark = getNextTaint();
-		for(int i = 0; i < _return.length; i++)
+		for (int i = 0; i < _return.length; i++)
 			_return[i] = taintMark;
 		return _return;
 	}
-	
-//	fills an array with the next taint label
-	public static void getTaint(int[] arr){
-		if(!TaintMap.containsKey(arr)){
+
+	// fills an array with the next taint label
+	public static void getTaint(int[] arr) {
+		if (!TaintMap.containsKey(arr)) {
 			int nextTaint = getNextTaint();
-			for(int i = 0; i<arr.length; i++){
+			for (int i = 0; i < arr.length; i++) {
 				arr[i] = nextTaint;
 			}
 			TaintMap.put(arr, nextTaint);
@@ -406,6 +430,24 @@ public class TaintTrackerConfig {
 				if (_return)
 					break;
 			}
+		}
+		return _return;
+	}
+
+	public static boolean isMainMethod(int access, String name, String desc, String signature, String[] exceptions) {
+		boolean _return = false;
+		if (((access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC) && "main".equals(name)
+				&& "([Ljava/lang/String;)V".equals(desc)) {
+			_return = true;
+		}
+
+		return _return;
+	}
+	
+	public static boolean isMainMethod(int opcode, String owner, String name, String desc, boolean itf){
+		boolean _return = false;
+		if(opcode == Opcodes.INVOKESTATIC && "main".equals(name) && "([Ljava/lang/String;)V".equals(desc)){
+			_return = true;
 		}
 		return _return;
 	}

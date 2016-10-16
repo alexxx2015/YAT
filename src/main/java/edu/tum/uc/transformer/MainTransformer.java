@@ -40,9 +40,9 @@ public class MainTransformer implements ClassFileTransformer {
 	public byte[] transform(ClassLoader loader, String className,
 			Class<?> classBeingRedefined, ProtectionDomain protectionDomain,
 			byte[] classfileBuffer) throws IllegalClassFormatException {
+//		check if to be instrumented class is whitelisted
 		if(!TaintTrackerConfig.isWhitelisted(className)) return classfileBuffer;
 		
-		//System.out.println("[MyUcTransformer]: Calling tranform ...");
 		if (this.instrument_webservice) {
 			this.setClassLoader(loader);
 			this.setProtectionDomain(protectionDomain);

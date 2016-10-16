@@ -2,7 +2,7 @@ import java.lang.reflect.Field;
 
 import edu.tum.uc.transformer.taint.TaintWrapper;
 
-public class TestClient extends Test {
+public class TestClient extends TestLoading {
 	
 	private String mystring;
 	public static void main(String[] args){

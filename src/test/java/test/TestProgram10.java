@@ -42,8 +42,8 @@ public class TestProgram10 implements TestIntf {
 	 */
 	public static void main(String[] args) throws IOException {
 
-		FileInputStream fis1 = new FileInputStream("target/test-classes/foo1.txt");
-		FileInputStream fis2 = new FileInputStream("target/test-classes/foo2.txt");
+		FileInputStream fis1 = new FileInputStream("foo1.txt");
+		FileInputStream fis2 = new FileInputStream("foo2.txt");
 		FileOutputStream fos1 = new FileOutputStream("out1.txt");
 		FileOutputStream fos2 = new FileOutputStream("out2.txt");
 		byte[] inbuffer1 = new byte[10];

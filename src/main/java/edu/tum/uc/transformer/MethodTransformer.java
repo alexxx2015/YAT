@@ -1,6 +1,5 @@
 package edu.tum.uc.transformer;
 
-import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -128,7 +127,7 @@ public class MethodTransformer extends MethodVisitor {
 		String taintIdName = TaintTrackerConfig.wrapWithTaintId(name);
 
 		if (opcode == Opcodes.GETFIELD) {
-			// get taint from owner object
+			// get taint from owner object if class is not whitelisted
 			if (!isWhitelistedOwner) {
 				if (noInstrField) {
 					mv.visitFieldInsn(opcode, owner, name, desc);
@@ -495,6 +494,11 @@ public class MethodTransformer extends MethodVisitor {
 			mv.visitInsn(TaintTrackerConfig.EMPTY_TAINT);
 		}
 	}
+	
+	@Override
+	public void visitIincInsn(int var, int increment){
+		mv.visitIincInsn(var, increment);
+	}
 
 	@Override
 	public void visitInsn(int opcode) {
@@ -506,7 +510,8 @@ public class MethodTransformer extends MethodVisitor {
 			o = this.analyzerAdapter.stack.get(this.analyzerAdapter.stack.size() - 1);
 			if (o instanceof String) {
 				Type t = Type.getType((String) o);
-				if (t.getSort() == Type.ARRAY && TaintTrackerConfig.isString(t.getElementType())) {
+				if (t.getSort() == Type.ARRAY && (TaintTrackerConfig.isString(t.getElementType())
+						|| TaintTrackerConfig.isPrimitiveStackType(t.getElementType()))) {
 					mv.visitMethodInsn(Opcodes.INVOKESTATIC,
 							TaintTrackerConfig.unescapeStr(TaintWrapper.class.getName()), "mergeTaints", "([I)I",
 							false);
@@ -730,27 +735,31 @@ public class MethodTransformer extends MethodVisitor {
 		case Opcodes.SALOAD:
 		case Opcodes.CALOAD:
 			// create tmp-var for taint idx
-			tmpTaintIdx = this.methodTransformerUtil.createTmpVar(Type.getType(TaintTrackerConfig.TAINT_DESC));
+//			tmpTaintIdx = this.methodTransformerUtil.createTmpVar(Type.getType(TaintTrackerConfig.TAINT_DESC));
 
 			// creates tmp-var for the index
-			tmpIdx = this.methodTransformerUtil.createTmpVar(Type.INT_TYPE);
+//			tmpIdx = this.methodTransformerUtil.createTmpVar(Type.INT_TYPE);
 
 			// REF - TREF - IDX - TIDX
-			mv.visitIntInsn(Opcodes.ISTORE, tmpTaintIdx);
+			// mv.visitIntInsn(Opcodes.ISTORE, tmpTaintIdx);
+			mv.visitInsn(Opcodes.POP);//Opcodes.SWAP
 			// REF - TREF - IDX
-			mv.visitIntInsn(Opcodes.ISTORE, tmpIdx);
-			// REF - TREF
-			mv.visitIntInsn(Opcodes.ILOAD, tmpTaintIdx);
-			// REF - TREF - TIDX
+//			mv.visitIntInsn(Opcodes.ISTORE, tmpIdx);
+			mv.visitInsn(Opcodes.DUP_X1);
+			// REF - IDX - TREF - IDX // mv.visitIntInsn(Opcodes.ILOAD, tmpTaintIdx);// REF - TREF - TIDX
 			mv.visitInsn(Opcodes.IALOAD);
-			// REF - TVAL
-			mv.visitInsn(Opcodes.SWAP);
-			// TVAL - REF
-			mv.visitIntInsn(Opcodes.ILOAD, tmpIdx);
+			// REF - IDX - TVAL
+			mv.visitInsn(Opcodes.DUP_X2);//Opcodes.SWAP);
+			mv.visitInsn(Opcodes.POP);
+//			mv.visitIntInsn(Opcodes.ILOAD, tmpIdx);
 			// TVAL - REF - IDX
 			mv.visitInsn(opcode);// Load actual value from array on the stack
 			// TVAL - VAL
-			mv.visitInsn(Opcodes.SWAP);
+			if (opcode == Opcodes.LALOAD || opcode == Opcodes.DALOAD) {
+				mv.visitInsn(Opcodes.DUP2_X1);
+				mv.visitInsn(Opcodes.POP2);
+			} else
+				mv.visitInsn(Opcodes.SWAP);
 			// VAL - TVAL
 			return;
 		case Opcodes.POP:
@@ -1092,6 +1101,66 @@ public class MethodTransformer extends MethodVisitor {
 					}
 				}
 			}
+		} else if (opcode == Opcodes.I2B || opcode == Opcodes.I2C || opcode == Opcodes.I2D || opcode == Opcodes.I2F
+				|| opcode == Opcodes.I2L || opcode == Opcodes.I2S) {
+			// V-T
+			mv.visitInsn(Opcodes.SWAP);
+			// T-V
+			mv.visitInsn(opcode);
+			// T-V
+			if (opcode == Opcodes.I2L || opcode == Opcodes.I2D) {
+				mv.visitInsn(Opcodes.DUP2_X1);
+				mv.visitInsn(Opcodes.POP2);
+			} else
+				mv.visitInsn(Opcodes.SWAP);
+			// V-T
+		} else if (opcode == Opcodes.L2D || opcode == Opcodes.L2F || opcode == Opcodes.L2I) {
+			// V-T
+			mv.visitInsn(Opcodes.DUP_X2);
+			mv.visitInsn(Opcodes.POP);
+			// T-V
+			mv.visitInsn(opcode);
+			if (opcode == Opcodes.L2D) {
+				mv.visitInsn(Opcodes.DUP2_X1);
+				mv.visitInsn(Opcodes.POP2);
+			} else
+				mv.visitInsn(Opcodes.SWAP);
+			// V-T
+		} 
+		else if (opcode == Opcodes.F2D || opcode == Opcodes.F2I || opcode == Opcodes.F2L){
+			// V-T
+			mv.visitInsn(Opcodes.SWAP);
+			// T-V
+			mv.visitInsn(opcode);
+			if(opcode == Opcodes.F2I){
+				mv.visitInsn(Opcodes.SWAP);
+			} else{
+				mv.visitInsn(Opcodes.DUP2_X1);
+				mv.visitInsn(Opcodes.POP2);
+			}
+		} else if (opcode == Opcodes.D2F || opcode == Opcodes.D2I || opcode == Opcodes.D2L){
+			// V-T
+			mv.visitInsn(Opcodes.DUP_X2);
+			mv.visitInsn(Opcodes.POP);
+			// T-V
+			mv.visitInsn(opcode);
+			if(opcode == Opcodes.D2L){
+				mv.visitInsn(Opcodes.DUP2_X1);
+				mv.visitInsn(Opcodes.POP2);
+			} else
+				mv.visitInsn(Opcodes.SWAP);
+		}
+		else if (opcode == Opcodes.INEG || opcode == Opcodes.FNEG){
+			mv.visitInsn(Opcodes.SWAP);
+			mv.visitInsn(opcode);
+			mv.visitInsn(Opcodes.SWAP);
+		}
+		else if (opcode == Opcodes.LNEG || opcode == Opcodes.DNEG){
+			mv.visitInsn(Opcodes.DUP_X2);
+			mv.visitInsn(Opcodes.POP);
+			mv.visitInsn(opcode);
+			mv.visitInsn(Opcodes.DUP2_X1);
+			mv.visitInsn(Opcodes.POP2);
 		}
 		// wrap command if it operates on primitive types
 		else if (this.methodTransformerUtil.wrapPrimTypeInsn(opcode, mv)) {
@@ -1180,7 +1249,7 @@ public class MethodTransformer extends MethodVisitor {
 				mv.visitTypeInsn(opcode, type);
 				mv.visitIntInsn(Opcodes.BIPUSH, 0);
 				;// TODO: retrieve the actual
-				// taint for string
+					// taint for string
 				return;
 			}
 		}
@@ -1190,6 +1259,12 @@ public class MethodTransformer extends MethodVisitor {
 
 	@Override
 	public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+		if (TaintTrackerConfig.isMainMethod(opcode, owner, name, desc, itf)) {
+			mv.visitInsn(Opcodes.POP);
+			mv.visitMethodInsn(opcode, owner, name, desc, itf);
+			return;
+		}
+		
 		// Wrap each original method invocation into another method that
 		// includes taint parameters
 		StringBuilder wrapperMethodDesc = new StringBuilder();
@@ -1277,7 +1352,6 @@ public class MethodTransformer extends MethodVisitor {
 		wrapperMethodDesc.append(")");
 
 		// add return type to wrapper method description
-		SinkSourceSpec isSource = this.methodTransformerUtil.isSource(mmiChildMethod);
 		Type retType = Type.getReturnType(desc);
 		int methodId = this.ctf.genNewMethodId();
 		String wrapperMethodName = name + methodId + "WRAPPER";
@@ -1400,6 +1474,7 @@ public class MethodTransformer extends MethodVisitor {
 			mvWrapper.visitMethodInsn(opcode, owner, name, newDesc, itf);
 
 			// check if method invocation is a source and add a taint
+			SinkSourceSpec isSource = this.methodTransformerUtil.isSource(mmiChildMethod);
 			if (isSource != null) {
 				System.out.println("Source detected: " + isSource.getClazz() + "." + isSource.getSelector());
 				String param = isSource.getParams();
@@ -1448,13 +1523,20 @@ public class MethodTransformer extends MethodVisitor {
 					if (paramPos > 0) {
 						int argPos = origArgs2Args.get(paramPos);
 						if (wrapperDescType.getArgumentTypes().length >= argPos) {
-							int varPos = argPos + 1;
+							int varPos = argPos + 1;//TODO: distinguish between static and instance method invocation
 							Type taintType = wrapperDescType.getArgumentTypes()[varPos];
 							if (taintType.getSort() == Type.ARRAY) {
 								mvWrapper.visitVarInsn(Opcodes.ALOAD, varPos);
 								mvWrapper.visitMethodInsn(Opcodes.INVOKESTATIC,
 										TaintTrackerConfig.unescapeStr(TaintTrackerConfig.class.getName()), "getTaint",
 										"([I)V", false);
+//								print message on commandline
+								mvWrapper.visitVarInsn(Opcodes.ALOAD, varPos);
+								mvWrapper.visitInsn(Opcodes.ICONST_0);
+								mvWrapper.visitInsn(Opcodes.IALOAD);
+								mvWrapper.visitLdcInsn("Source invoked " + mmiChildMethod.getClassName() + "." + mmiChildMethod.getMethodName());
+								mvWrapper.visitMethodInsn(Opcodes.INVOKESTATIC, Logger.class.getName().replace(".", "/"), "log",
+										"(ILjava/lang/String;)V", false);
 							} else if (taintType.getSort() != Type.OBJECT || TaintTrackerConfig.isString(taintType)) {
 								mvWrapper.visitLdcInsn(this.mmiParent.getClassName());
 								mvWrapper.visitLdcInsn(this.mmiParent.getMethodName());
