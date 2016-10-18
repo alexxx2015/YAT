@@ -174,7 +174,7 @@ public class ClassTransformer extends ClassVisitor {
 		// MyMethodVisitor
 		// We cannot instrument native machine code
 		if ((access & Opcodes.ACC_NATIVE) != Opcodes.ACC_NATIVE) {
-			// mv = new AnalyzerAdapter(this.className, access, name, desc, mv);
+			 mv = new AnalyzerAdapter(this.className, access, name, desc, mv);
 
 			mv = new MethodTransformer(Opcodes.ASM5, mv, methodUtility, cv, this.superName, this);
 			MethodTransformer methTrans = (MethodTransformer) mv;

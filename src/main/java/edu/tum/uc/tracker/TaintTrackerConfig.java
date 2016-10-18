@@ -37,6 +37,7 @@ public class TaintTrackerConfig {
 
 	// Taint tag's data type
 	public static final String TAINT_DESC = "I";
+	public static final Class<?> TAINT_DESC_CLASS = int.class; 
 	public static final String TAINT_WRAPPER_CLASS = TaintTrackerConfig.unescapeStr(Integer.class.getName());
 	public static final String TAINT_WRAPPER_CLASS_METHOD = "intValue";
 	public static final String TAINT_WRAPPER_CLASS_METHOD_DESC = "()I";
@@ -51,6 +52,7 @@ public class TaintTrackerConfig {
 	public static boolean MULTI_TAINT_TRACKING = false;
 	public static final int RAW_INSN = 201;
 	public static final int EMPTY_TAINT = Opcodes.ICONST_0;
+	public static final int NULL_TAINT = 0;
 	public static final Integer[] EMPTY_ARR_TAINT = new Integer[32];
 	public static final Object TAINT_STACK_TYPE = Opcodes.INTEGER;
 	public static final String TAINT_STACK_ARR_TYPE = TAINT_DESC_ARR;
@@ -313,7 +315,7 @@ public class TaintTrackerConfig {
 		reader.readReport(filename);
 	}
 
-	private static int TaintMarkCounter = 5;
+	private static int TaintMarkCounter = 1;
 	private static Map<Object, Integer> TaintMap = new HashMap<Object, Integer>();
 
 	public static int getTaint(String parentClassName, String parentMethodName, String childClassName,
@@ -339,9 +341,9 @@ public class TaintTrackerConfig {
 	}
 
 	// generates an array of taints
-	public static int[] getTaint(int length) {
+	public static int[] getEmptyTaint(int length) {
 		int[] _return = new int[length];
-		int taintMark = getNextTaint();
+		int taintMark = 0;//getNextTaint();
 		for (int i = 0; i < _return.length; i++)
 			_return[i] = taintMark;
 		return _return;

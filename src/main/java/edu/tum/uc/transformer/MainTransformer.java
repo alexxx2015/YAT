@@ -1,6 +1,5 @@
 package edu.tum.uc.transformer;
 import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.net.URL;
@@ -11,6 +10,7 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.TraceClassVisitor;
 
 import edu.tum.uc.tomcat.TomcatClassLoader;
@@ -60,8 +60,8 @@ public class MainTransformer implements ClassFileTransformer {
 //		CheckClassAdapter cca = new CheckClassAdapter(cw);
 //		trace and prints complete class on std-out
 //		PrintWriter pw = new PrintWriter(new NullOutputStream());
-		PrintWriter pw = new PrintWriter(System.out);
-		TraceClassVisitor tcv = new TraceClassVisitor(cw,pw);
+//		PrintWriter pw = new PrintWriter(System.out);
+//		TraceClassVisitor tcv = new TraceClassVisitor(cw,pw);
 
 		ClassVisitor cv = new ClassTransformer(Opcodes.ASM5, cw, cr.getClassName());
 //		ClassVisitor cv = new ClassTransformer(Opcodes.ASM5, tcv, cr.getClassName());

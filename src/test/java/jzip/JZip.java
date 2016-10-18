@@ -42,7 +42,7 @@ public class JZip {
 	public static void main(String[] args) {
 		JZip zipper = new JZip();
 		int z = zipper.testArith(4, 4);
-		 zipper.start();
+		zipper.start();
 	}
 
 	private int testArith(int h, long r) {
@@ -183,15 +183,13 @@ public class JZip {
 					if (zipValue.length == 2) {
 						zipFile = zipValue[0];
 						sourceFolder = zipValue[1];
-					} 
-					else if (zipValue.length == 1) {
+					} else if (zipValue.length == 1) {
 						zipFile = zipValue[0];
 						if ((this.CONFIGURATION != null) && (this.CONFIGURATION.contains("zip-source"))) {
 							sourceFolder = this.CONFIGURATION.getProperty("zip-source");
 						}
 					}
-				}
-				else {
+				} else {
 					if ((this.CONFIGURATION != null) && (this.CONFIGURATION.containsKey("zip-source"))) {
 						sourceFolder = this.CONFIGURATION.getProperty("zip-source");
 					}
@@ -388,8 +386,7 @@ public class JZip {
 				Object o = it.next();
 				System.out.println(o + ": " + this.CONFIGURATION.getProperty((String) o));
 			}
-		} 
-		else {
+		} else {
 			System.out.println("No entries");
 		}
 	}

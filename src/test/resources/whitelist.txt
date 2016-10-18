@@ -3,3 +3,4 @@ startswith:myjzip
 startswith:jzip
 startswith:test
 equals:java.lang.Strings
+startswith:reflection

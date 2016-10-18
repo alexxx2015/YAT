@@ -26,4 +26,10 @@
 	<sink class="Ljava/io/Writer" selector="write([CII)V" params="1"/>
 	<sink class="Ljava/io/Writer" selector="write(Ljava/lang/String;)V" params="1"/>
 	<sink class="Ljava/io/Writer" selector="write(Ljava/lang/String;II)V" params="1"/>
+	
+	<!-- Reflection source and sink -->
+	<source class="Lreflection/SourceRef" selector="getValue()Ljava/lang/String;" params="ret"/>
+	<source class="Lreflection/SourceRef" selector="getIntValue()I" params="ret"/>
+	<sink class="Lreflection/SinkRef" selector="output(Ljava/lang/String;)V" params="1" />
+	<sink class="Lreflection/SinkRef" selector="output(I)V" params="1" />
 </sourcesandsinks>

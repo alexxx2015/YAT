@@ -22,7 +22,7 @@ public class TestProgram10 implements TestIntf {
 		DataMover dataMover = new DataMover(x);
 		dataMover.inbuf = inbuf;
 		dataMover.outbuf = outbuf;
-		dataMover.staticx = inbuf[2];
+//		dataMover.staticx = inbuf[2];
 		IDataMover dataMoverInterface = dataMover;
 		dataMoverInterface.moveData();
 	}
@@ -56,7 +56,7 @@ public class TestProgram10 implements TestIntf {
 
 		moveData(inbuffer1, outbuffer1, (byte) inbuffer1[0], ",");
 		moveData(inbuffer2, outbuffer2, x1, "");
-		outbuffer1[1] = inbuffer2[4];
+//		outbuffer1[1] = inbuffer2[4];
 		fos1.write(outbuffer1);
 		fos2.write(outbuffer2);
 

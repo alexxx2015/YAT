@@ -494,9 +494,9 @@ public class MethodTransformer extends MethodVisitor {
 			mv.visitInsn(TaintTrackerConfig.EMPTY_TAINT);
 		}
 	}
-	
+
 	@Override
-	public void visitIincInsn(int var, int increment){
+	public void visitIincInsn(int var, int increment) {
 		mv.visitIincInsn(var, increment);
 	}
 
@@ -593,7 +593,7 @@ public class MethodTransformer extends MethodVisitor {
 			boolean instrumOpcode = false;
 			o = this.analyzerAdapter.stack.get(this.analyzerAdapter.stack.size() - 3);
 			if (o instanceof String) {
-				oType = Type.getType((String) o);
+				oType = Type.getType(TaintTrackerConfig.makeBCSignature((String) o));
 			}
 
 			// add usual instrumentation if string-array
@@ -603,6 +603,14 @@ public class MethodTransformer extends MethodVisitor {
 			}
 			// add usual instrumentation is primitive-array
 			else {
+				o = this.analyzerAdapter.stack.get(this.analyzerAdapter.stack.size() - 1);
+				if (o instanceof String) {
+					oType = Type.getType(TaintTrackerConfig.makeBCSignature((String) o));
+					// remove taint mark from array element if its typed String
+					if (oType != null && TaintTrackerConfig.isString(oType)) {
+						mv.visitInsn(Opcodes.POP);
+					}
+				}
 				// ARR-Idx-TIdx-Val
 				mv.visitInsn(Opcodes.SWAP);
 				// ARR-Idx-Val-TIdx
@@ -661,8 +669,9 @@ public class MethodTransformer extends MethodVisitor {
 				valueType = Type.CHAR_TYPE;
 				break;
 			case Opcodes.AASTORE:
-				if (oType != null && oType.getSort() == Type.ARRAY
-						&& (TaintTrackerConfig.isString(oType.getElementType()))) {
+				if ((oType != null && oType.getSort() == Type.ARRAY
+						&& (TaintTrackerConfig.isString(oType.getElementType())))
+						|| (oType != null && TaintTrackerConfig.isString(oType))) {
 					valueType = oType;
 					tmpValueStoreOpcode = Opcodes.ASTORE;
 					tmpValueLoadOpcode = Opcodes.ALOAD;
@@ -678,7 +687,8 @@ public class MethodTransformer extends MethodVisitor {
 			// REF - TREF - IDX - TIDX - VAL
 			mv.visitIntInsn(tmpValueStoreOpcode, tmpValue);
 			// REF - TREF - IDX - TIDX
-			mv.visitIntInsn(Opcodes.ISTORE, tmpTaintIdx);
+			// mv.visitIntInsn(Opcodes.ISTORE, tmpTaintIdx);
+			mv.visitInsn(Opcodes.POP);
 			// REF - TREF - IDX
 			mv.visitIntInsn(Opcodes.ISTORE, tmpIdx);
 			// REF - TREF
@@ -692,13 +702,13 @@ public class MethodTransformer extends MethodVisitor {
 									// position within the array
 			mv.visitIntInsn(Opcodes.ALOAD, tmpTaintArray);
 			// TREF
-			mv.visitIntInsn(Opcodes.ILOAD, tmpTaintIdx);
+			mv.visitIntInsn(Opcodes.ILOAD, tmpIdx);// tmpTaintIdx);
 			// TREF - TIDX
 			mv.visitIntInsn(Opcodes.ILOAD, tmpTaintValue);
 			// TREF - TIDX - TVAL
 			mv.visitIntInsn(Opcodes.ALOAD, tmpTaintArray);
 			// TREF - TIDX - TVAL - TREF
-			mv.visitIntInsn(Opcodes.ILOAD, tmpTaintIdx);
+			mv.visitIntInsn(Opcodes.ILOAD, tmpIdx);// tmpTaintIdx);
 			// TREF - TIDX - TVAL - TREF - TIDX
 			mv.visitInsn(Opcodes.IALOAD);
 			// TREF - TIDX - TVAL - TVAL2
@@ -735,23 +745,25 @@ public class MethodTransformer extends MethodVisitor {
 		case Opcodes.SALOAD:
 		case Opcodes.CALOAD:
 			// create tmp-var for taint idx
-//			tmpTaintIdx = this.methodTransformerUtil.createTmpVar(Type.getType(TaintTrackerConfig.TAINT_DESC));
+			// tmpTaintIdx =
+			// this.methodTransformerUtil.createTmpVar(Type.getType(TaintTrackerConfig.TAINT_DESC));
 
 			// creates tmp-var for the index
-//			tmpIdx = this.methodTransformerUtil.createTmpVar(Type.INT_TYPE);
+			// tmpIdx = this.methodTransformerUtil.createTmpVar(Type.INT_TYPE);
 
 			// REF - TREF - IDX - TIDX
 			// mv.visitIntInsn(Opcodes.ISTORE, tmpTaintIdx);
-			mv.visitInsn(Opcodes.POP);//Opcodes.SWAP
+			mv.visitInsn(Opcodes.POP);// Opcodes.SWAP
 			// REF - TREF - IDX
-//			mv.visitIntInsn(Opcodes.ISTORE, tmpIdx);
+			// mv.visitIntInsn(Opcodes.ISTORE, tmpIdx);
 			mv.visitInsn(Opcodes.DUP_X1);
-			// REF - IDX - TREF - IDX // mv.visitIntInsn(Opcodes.ILOAD, tmpTaintIdx);// REF - TREF - TIDX
+			// REF - IDX - TREF - IDX // mv.visitIntInsn(Opcodes.ILOAD,
+			// tmpTaintIdx);// REF - TREF - TIDX
 			mv.visitInsn(Opcodes.IALOAD);
 			// REF - IDX - TVAL
-			mv.visitInsn(Opcodes.DUP_X2);//Opcodes.SWAP);
+			mv.visitInsn(Opcodes.DUP_X2);// Opcodes.SWAP);
 			mv.visitInsn(Opcodes.POP);
-//			mv.visitIntInsn(Opcodes.ILOAD, tmpIdx);
+			// mv.visitIntInsn(Opcodes.ILOAD, tmpIdx);
 			// TVAL - REF - IDX
 			mv.visitInsn(opcode);// Load actual value from array on the stack
 			// TVAL - VAL
@@ -1126,36 +1138,33 @@ public class MethodTransformer extends MethodVisitor {
 			} else
 				mv.visitInsn(Opcodes.SWAP);
 			// V-T
-		} 
-		else if (opcode == Opcodes.F2D || opcode == Opcodes.F2I || opcode == Opcodes.F2L){
+		} else if (opcode == Opcodes.F2D || opcode == Opcodes.F2I || opcode == Opcodes.F2L) {
 			// V-T
 			mv.visitInsn(Opcodes.SWAP);
 			// T-V
 			mv.visitInsn(opcode);
-			if(opcode == Opcodes.F2I){
+			if (opcode == Opcodes.F2I) {
 				mv.visitInsn(Opcodes.SWAP);
-			} else{
+			} else {
 				mv.visitInsn(Opcodes.DUP2_X1);
 				mv.visitInsn(Opcodes.POP2);
 			}
-		} else if (opcode == Opcodes.D2F || opcode == Opcodes.D2I || opcode == Opcodes.D2L){
+		} else if (opcode == Opcodes.D2F || opcode == Opcodes.D2I || opcode == Opcodes.D2L) {
 			// V-T
 			mv.visitInsn(Opcodes.DUP_X2);
 			mv.visitInsn(Opcodes.POP);
 			// T-V
 			mv.visitInsn(opcode);
-			if(opcode == Opcodes.D2L){
+			if (opcode == Opcodes.D2L) {
 				mv.visitInsn(Opcodes.DUP2_X1);
 				mv.visitInsn(Opcodes.POP2);
 			} else
 				mv.visitInsn(Opcodes.SWAP);
-		}
-		else if (opcode == Opcodes.INEG || opcode == Opcodes.FNEG){
+		} else if (opcode == Opcodes.INEG || opcode == Opcodes.FNEG) {
 			mv.visitInsn(Opcodes.SWAP);
 			mv.visitInsn(opcode);
 			mv.visitInsn(Opcodes.SWAP);
-		}
-		else if (opcode == Opcodes.LNEG || opcode == Opcodes.DNEG){
+		} else if (opcode == Opcodes.LNEG || opcode == Opcodes.DNEG) {
 			mv.visitInsn(Opcodes.DUP_X2);
 			mv.visitInsn(Opcodes.POP);
 			mv.visitInsn(opcode);
@@ -1175,7 +1184,9 @@ public class MethodTransformer extends MethodVisitor {
 		// load value from constant pool
 		mv.visitLdcInsn(cst);
 		// load empty taint on stack
-		mv.visitInsn(TaintTrackerConfig.EMPTY_TAINT);
+		if (cst instanceof Integer || cst instanceof Float || cst instanceof Long || cst instanceof Double
+				|| cst instanceof String)
+			mv.visitInsn(TaintTrackerConfig.EMPTY_TAINT);
 	}
 
 	@Override
@@ -1240,7 +1251,8 @@ public class MethodTransformer extends MethodVisitor {
 				mv.visitInsn(Opcode.DUP);
 				mv.visitInsn(Opcodes.ARRAYLENGTH);
 				mv.visitMethodInsn(Opcodes.INVOKESTATIC,
-						TaintTrackerConfig.unescapeStr(TaintTrackerConfig.class.getName()), "getTaint", "(I)[I", false);
+						TaintTrackerConfig.unescapeStr(TaintTrackerConfig.class.getName()), "getEmptyTaint", "(I)[I",
+						false);
 			}
 			return;
 		} else if (opcode == Opcodes.CHECKCAST) {
@@ -1264,7 +1276,7 @@ public class MethodTransformer extends MethodVisitor {
 			mv.visitMethodInsn(opcode, owner, name, desc, itf);
 			return;
 		}
-		
+
 		// Wrap each original method invocation into another method that
 		// includes taint parameters
 		StringBuilder wrapperMethodDesc = new StringBuilder();
@@ -1273,6 +1285,8 @@ public class MethodTransformer extends MethodVisitor {
 		boolean isConstructor = name.equals("<init>") ? true : false;
 		boolean isStatic = opcode == Opcodes.INVOKESTATIC ? true : false;
 		boolean isWhitelisted = TaintTrackerConfig.isWhitelisted(owner);
+		boolean isReflectMCall = "java/lang/reflect/Method".equals(owner) && "invoke".equals(name);
+		boolean isReflectCCall = "java/lang/Class".equals(owner) && "getMethod".equals(name);
 
 		// Maps original argument position to the position with modifications
 		Map<Integer, Integer> origArgs2Args = new HashMap<Integer, Integer>();
@@ -1394,6 +1408,22 @@ public class MethodTransformer extends MethodVisitor {
 				mvWrapper.visitTypeInsn(Opcodes.NEW, owner);
 				mvWrapper.visitInsn(Opcodes.DUP);
 			}
+			// create a new method object with an adapted method signature for
+			// reflective method calls
+//			else if (isReflectMCall) {
+//				mvWrapper.visitVarInsn(Opcodes.ALOAD, 0);
+//				mvWrapper.visitInsn(Opcodes.DUP);
+//				mvWrapper.visitMethodInsn(Opcodes.INVOKEVIRTUAL, TaintTrackerConfig.unescapeStr(Method.class.getName()),
+//						"getParameterCount", "()I", false);
+//				Label skip = new Label();
+//				mvWrapper.visitJumpInsn(Opcodes.IFLE, skip);
+//				// mvWrapper.visitVarInsn(Opcodes.ALOAD, 0);
+//				mvWrapper.visitMethodInsn(Opcodes.INVOKESTATIC,
+//						TaintTrackerConfig.unescapeStr(ReflectionHandler.class.getName()), "adaptMethod",
+//						"(Ljava/lang/reflect/Method;)Ljava/lang/reflect/Method;", false);
+//				mvWrapper.visitLabel(skip);
+//				posKey++;
+//			}
 			// do not propagate taint labels inside non-whitelisted classes
 			else if (!isStatic && !isWhitelisted) {
 				mvWrapper.visitVarInsn(Opcodes.ALOAD, 0);
@@ -1432,6 +1462,25 @@ public class MethodTransformer extends MethodVisitor {
 						mvWrapper.visitVarInsn(argsLoadOpcode, posKey);
 				}
 				posKey += t.getSize();
+			}
+//			adapt method signature and adapt taint tags for reflective class.getMethod calls
+			if (isReflectCCall) {
+				Object o = this.analyzerAdapter.stack.get(this.analyzerAdapter.stack.size()-1);
+				if(o instanceof String){
+//					Type t = Type.getType(TaintTrackerConfig.makeBCSignature((String) o));
+					mvWrapper.visitMethodInsn(Opcodes.INVOKESTATIC,
+							TaintTrackerConfig.unescapeStr(ReflectionHandler.class.getName()), "adaptMethodSignature",
+							"([Ljava/lang/Class;)[Ljava/lang/Class;", false);		
+				}
+			}
+//			print parameters of a reflective call 
+			if(isReflectMCall){
+				Object o = this.analyzerAdapter.stack.get(this.analyzerAdapter.stack.size()-1);
+				if(o instanceof String){
+					mvWrapper.visitMethodInsn(Opcodes.INVOKESTATIC,
+							TaintTrackerConfig.unescapeStr(ReflectionHandler.class.getName()), "adaptMethodParameters",
+							"([Ljava/lang/Object;)[Ljava/lang/Object;", false);		
+				}				
 			}
 
 			// mark method invocation as sink
@@ -1472,6 +1521,21 @@ public class MethodTransformer extends MethodVisitor {
 
 			// invoke the actual method
 			mvWrapper.visitMethodInsn(opcode, owner, name, newDesc, itf);
+
+			// for non-whitelisted classes propagate taint to complete object
+			// if (!isWhitelisted && mmiChildMethod.getNewArgTypes().size() > 0)
+			// {
+			// if (opcode == Opcodes.INVOKEVIRTUAL) {
+			//
+			// } else if (opcode == Opcodes.INVOKESTATIC &&
+			// newDescType.getReturnType().getSort() == Type.OBJECT) {
+			// mvWrapper.visitInsn(Opcodes.DUP);
+			// mvWrapper.visitMethodInsn(Opcodes.INVOKESTATIC,
+			// TaintTrackerConfig.unescapeStr(RuntimeTracker.class.getName()),
+			// "addTaint",
+			// "(Ljava/lang/Object;I)V", false);
+			// }
+			// }
 
 			// check if method invocation is a source and add a taint
 			SinkSourceSpec isSource = this.methodTransformerUtil.isSource(mmiChildMethod);
@@ -1523,20 +1587,24 @@ public class MethodTransformer extends MethodVisitor {
 					if (paramPos > 0) {
 						int argPos = origArgs2Args.get(paramPos);
 						if (wrapperDescType.getArgumentTypes().length >= argPos) {
-							int varPos = argPos + 1;//TODO: distinguish between static and instance method invocation
+							int varPos = argPos + 1;// TODO: distinguish between
+													// static and instance
+													// method invocation
 							Type taintType = wrapperDescType.getArgumentTypes()[varPos];
 							if (taintType.getSort() == Type.ARRAY) {
 								mvWrapper.visitVarInsn(Opcodes.ALOAD, varPos);
 								mvWrapper.visitMethodInsn(Opcodes.INVOKESTATIC,
 										TaintTrackerConfig.unescapeStr(TaintTrackerConfig.class.getName()), "getTaint",
 										"([I)V", false);
-//								print message on commandline
+								// print message on commandline
 								mvWrapper.visitVarInsn(Opcodes.ALOAD, varPos);
 								mvWrapper.visitInsn(Opcodes.ICONST_0);
 								mvWrapper.visitInsn(Opcodes.IALOAD);
-								mvWrapper.visitLdcInsn("Source invoked " + mmiChildMethod.getClassName() + "." + mmiChildMethod.getMethodName());
-								mvWrapper.visitMethodInsn(Opcodes.INVOKESTATIC, Logger.class.getName().replace(".", "/"), "log",
-										"(ILjava/lang/String;)V", false);
+								mvWrapper.visitLdcInsn("Source invoked " + mmiChildMethod.getClassName() + "."
+										+ mmiChildMethod.getMethodName());
+								mvWrapper.visitMethodInsn(Opcodes.INVOKESTATIC,
+										Logger.class.getName().replace(".", "/"), "log", "(ILjava/lang/String;)V",
+										false);
 							} else if (taintType.getSort() != Type.OBJECT || TaintTrackerConfig.isString(taintType)) {
 								mvWrapper.visitLdcInsn(this.mmiParent.getClassName());
 								mvWrapper.visitLdcInsn(this.mmiParent.getMethodName());
@@ -1550,6 +1618,11 @@ public class MethodTransformer extends MethodVisitor {
 						}
 					}
 				}
+			}
+			
+//			merge all taint labels if its not a source nor a sink
+			if(isSource == null && isSink == null){
+				//TODO: is method invocation is not a source and not a sink then merge all taint marks of passed parameters and them to the object and possibly returned value
 			}
 
 			// add return statement at the end of method
@@ -1568,21 +1641,20 @@ public class MethodTransformer extends MethodVisitor {
 					String fieldName = "EMPTY_TAINT";
 					String fieldDesc = TaintTrackerConfig.TAINT_DESC;
 
-					if (retArg.getSort() == Type.ARRAY) {
-						fieldName = "EMPTY_ARR_TAINT";
-						fieldDesc = TaintTrackerConfig.TAINT_DESC_ARR;
-					}
-
 					// load empty taint on stack if method invocation is not a
 					// source
 					if (retArg.getSort() == Type.ARRAY) {
+						fieldName = "EMPTY_ARR_TAINT";
+						fieldDesc = TaintTrackerConfig.TAINT_DESC_ARR;
 						mvWrapper.visitInsn(Opcodes.DUP);
 						mvWrapper.visitInsn(Opcodes.ARRAYLENGTH);
 						mvWrapper.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_INT);
 					} else {
-						mvWrapper.visitFieldInsn(Opcodes.GETSTATIC,
-								TaintTrackerConfig.unescapeStr(TaintTrackerConfig.class.getName()), fieldName,
-								fieldDesc);
+						// mvWrapper.visitFieldInsn(Opcodes.GETSTATIC,
+						// TaintTrackerConfig.unescapeStr(TaintTrackerConfig.class.getName()),
+						// fieldName,
+						// fieldDesc);
+						mvWrapper.visitInsn(TaintTrackerConfig.EMPTY_TAINT);
 					}
 
 					// generate method descriptor for getter method
@@ -1604,6 +1676,18 @@ public class MethodTransformer extends MethodVisitor {
 		Type wrapperClassType = Type.getType(TaintTrackerConfig.unescapeStr(this.className));
 		Type wrapperReturnType = Type.getReturnType(wrapperMethodDesc.toString());
 		// mv.visitMethodInsn(Opcodes.INVOKESPECIAL, owner, name, desc, intf);
+
+//		if (isReflectMCall) {
+//			// M-o-P
+//			mv.visitInsn(Opcode.DUP2_X1);
+//			// O-P-M-O-P
+//			mv.visitInsn(Opcodes.POP2);
+//			// O-P-M
+//			mv.visitInsn(Opcodes.DUP_X2);
+//			// M-O-P-M
+//			mv.visitMethodInsn(Opcodes.INVOKESTATIC, Logger.class.getName().replace(".", "/"), "log",
+//					"(Ljava/lang/reflect/Method;)V", false);
+//		}
 		mv.visitMethodInsn(wrapperOpcode, wrapperClassType.getDescriptor(), wrapperMethodName,
 				wrapperMethodDesc.toString(), itf);
 
@@ -1631,6 +1715,19 @@ public class MethodTransformer extends MethodVisitor {
 		else if ((wrapperReturnType.getSort() == Type.OBJECT || wrapperReturnType.getSort() == Type.ARRAY)
 				&& (wrapperReturnType.getInternalName().equals(TaintWrapper.class.getName().replace(".", "/")))) {
 			this.methodTransformerUtil.unfoldWrapperValue(mv, Type.getReturnType(desc));
+		} else if (isReflectMCall) {
+			Object o = this.analyzerAdapter.stack.get(this.analyzerAdapter.stack.size() - 2);
+			if (o instanceof String) {
+				Type t = Type.getType(TaintTrackerConfig.makeBCSignature((String) o));
+			}
+			mv.visitInsn(Opcodes.DUP);
+			mv.visitTypeInsn(Opcodes.INSTANCEOF, TaintTrackerConfig.unescapeStr(TaintWrapper.class.getName()));
+			Label noInstLab = new Label();
+			mv.visitJumpInsn(Opcodes.IFEQ, noInstLab);
+			mv.visitTypeInsn(Opcodes.CHECKCAST, TaintTrackerConfig.unescapeStr(TaintWrapper.class.getName()));
+			mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, TaintTrackerConfig.unescapeStr(TaintWrapper.class.getName()),
+					"getValueAsWrapper", "()Ljava/lang/Object;", false);
+			mv.visitLabel(noInstLab);
 		}
 	}
 

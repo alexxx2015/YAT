@@ -1,17 +1,18 @@
+package reflection;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import reflection.SinkRef;
-
 //sun.reflect.NativeMethodAccessorImpl
-public class RunTestRef {
+public class ReflectionExample {
 	
 	public static void main(String[] args){
-		String s = "Hello World";
-		SinkRef sink = new SinkRef();
+		SourceReflection source = new SourceReflection();
+		SinkReflection sink = new SinkReflection();
 		try {
-			Method m = sink.getClass().getMethod("output", String.class);
-			m.invoke(sink, s);
+			Method mGetVal = source.getClass().getMethod("getIntValue", null);
+			int s = (int) mGetVal.invoke(source, null);
+			Method mOutput = sink.getClass().getMethod("output", int.class);
+			mOutput.invoke(sink,s);
 		} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

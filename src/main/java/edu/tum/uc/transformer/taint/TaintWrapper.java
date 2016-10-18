@@ -19,6 +19,17 @@ public class TaintWrapper<V,T> {
 	public V getValue(){
 		return this.value;
 	}
+	
+	public Object getValueAsWrapper(){
+		Object _return = null;
+		if (value instanceof Boolean){
+			
+		}
+		else if(value instanceof Integer || value.getClass().equals(int.class)){
+			_return = new Integer((int) value);
+		}
+		return _return;
+	}
 
 	public static TaintWrapper<Boolean,Integer> getWrapper(Boolean i, int taint){
 		return new TaintWrapper<Boolean,Integer>(i,taint);

@@ -29,6 +29,7 @@ public class RunJZipTest extends BasicTest {
 		f.getParentFile().mkdirs();
 		FileOutputStream fos = new FileOutputStream(f);
 		fos.write(instrumentedClass);
+		fos.close();
 	}
 
 }
